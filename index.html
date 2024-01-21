@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Github Repositories</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container border my-4 rounded">
+    <section class="p-4 w-100">
+        <div id="profile" class="row row-cols-4"></div>
+    </section>
+    <section class="p-4 w-100">
+        <div id="repo-box" class="row row-cols-2 g-3"></div>
+    </section>
+    <section class="pt-4 w-100">
+        <nav aria-label="Page navigation example" class="d-flex justify-content-center">
+            <ul id="pagination-example" class="pagination">
+                <li class="page-item"><a class="page-link" href="#">&laquo;&laquo;</a></li>
+                
+                <li class="page-item"><a class="page-link" href="#">&raquo;&raquo;</a></li>
+            </ul>
+        </nav>
+    </section>
+    <section class="pt-2 w-75 mx-auto px-5">
+        <nav aria-label="Page navigation" class="w-50 mx-auto">
+            <ul id="pagination" class="pagination justify-content-between">
+                <li class="page-item disabled">
+                    <a class="page-link rounded-pill" href="#" tabindex="-1" aria-disabled="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/>
+                      </svg> Older</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link rounded-pill" href="#" onclick="loadPage('prev')">Newer <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8"/>
+                      </svg></a>
+                </li>
+            </ul>
+        </nav>
+    </section>
+</div>
+
+    <script src="js/jquery-3.6.4.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+
+    <script>
+        
+        var user = document.domain.split('.', 1);
+        var recordsPerPage = 6;
+        var currentPage = 1;
+        var totalPages = 9; 
+        
+    
+        window.onload = genRepo(user, currentPage);
+    
+        function genRepo(user, page) {
+            const testuser = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
+    
+            if (testuser.test(user) == false || user == "" || user == null) {
+                $("#repo-box").append("<div class='alert alert-danger' role='alert'>Sorry, the GitHub username appears to be invalid</div>");
+            } else {
+                user = 'microsoft';
+                var requestURL = 'https://api.github.com/users/' + user + '/repos?per_page=' + recordsPerPage + '&page=' + page;
+                var userApiUrl = "https://api.github.com/users/" + user;
+                var requestUser = $.get(userApiUrl, function (userResponse) { 
+                    userData = userResponse;
+                    populateProfile(userData);
+                })
+                var request = $.get(requestURL, function (data) {
+                    
+                })
+                .done(function () {
+                    request = request.responseJSON;
+                    console.log(request);
+                    if (!Array.isArray(request) || !request.length) {
+                        $("#repo-box").append("<div class='alert alert-warning' role='alert'>Sorry, the GitHub username entered has no other repos or doesn't exist</div>");
+                    } else {
+                        for (i = 0; i < request.length; i++) {
+                            // variables from api request
+                            var repo_url = request[i].html_url;
+                            var username = request[i].owner.login;
+                            var repo_name = request[i].name;
+                            var repo_description = request[i].description;
+                            var repo_language = request[i].language;
+                            var repo_stars = request[i].stargazers_count;
+                            var repo_forks = request[i].forks;
+                            // replaces null values to be better represented when displayed
+                            repo_description = repo_description || "<i>No Description</i>";
+                            repo_language = repo_language || "-";
+    
+                            // Puts repo information into div
+                            $("#repo-box").append(`
+                                <div class="col">
+                                    <div class='card mt-3'>
+                                        <div class='card-body'>
+                                            <h5 class='card-title text-truncate'>${username}/${repo_name}</h5>
+                                            <p class='card-text text-truncate'>${repo_description}</p>
+                                            <div class='d-flex justify-content-between'>
+                                                <div class='btn btn-primary'>
+                                                    ${repo_language}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `);
+                        }
+                    }
+                    updatePagination(page, totalPages);
+                });
+    
+                
+            }
+        }
+    
+        function loadPage(direction) {
+            if (direction === 'prev' && currentPage > 1) {
+                currentPage--;
+            } else if (direction === 'next') {
+                currentPage++;
+            }
+    
+            $("#repo-box").empty();
+            genRepo(user, currentPage);
+        }
+    
+        function updatePagination(page, totalPages) {
+            // Dynamically generate pagination based on total pages
+            var paginationExample = $("#pagination-example");
+            paginationExample.empty();
+    
+            // Only show pagination if there are more than one page
+            if (totalPages > 1) {
+                paginationExample.append('<li class="page-item"><a class="page-link" href="#" onclick="loadPage(\'prev\')">&laquo;</a></li>');
+    
+                for (var i = 1; i <= totalPages; i++) {
+                    var pageClass = (i === currentPage) ? "active" : "";
+                    paginationExample.append('<li class="page-item ' + pageClass + '"><a class="page-link" href="#" onclick="loadPage(' + i + ')">' + i + '</a></li>');
+                } 
+    
+                paginationExample.append('<li class="page-item"><a class="page-link" href="#" onclick="loadPage(\'next\')">&raquo;</a></li>');
+            }
+        }
+    
+        function populateProfile(owner) {
+            const profile = $('#profile');
+            profile.empty();
+            
+            profile.append(`<div class="col"><div class="mb-4"><img src="${owner.avatar_url}" class="img-thumbnail rounded-circle p-2"/></div><a href="${owner.html_url}" target="_blank" class="link-dark text-decoration-none"><img src="https://d3sxshmncs10te.cloudfront.net/icon/free/svg/3004442.svg?token=eyJhbGciOiJoczI1NiIsImtpZCI6ImRlZmF1bHQifQ__.eyJpc3MiOiJkM3N4c2htbmNzMTB0ZS5jbG91ZGZyb250Lm5ldCIsImV4cCI6MTcwNjA3NDgwMCwicSI6bnVsbCwiaWF0IjoxNzA1ODE1NjAwfQ__.fe24df37639dc96ea5d851fa602c25f39766ef4ede9df94d3beb10845e154d76" width="32" class="px-1 pl-0" />${owner.html_url}</a></div>`);
+
+            profile.append(`<div class="col"><h1 class="text-capitalize">${owner.login}</h1><p>${owner.bio || 'Bio goes here'}</p><p><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-geo-alt-fill" viewBox="0 0 16 16">
+  <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"></path>
+</svg> ${owner.location || 'N/A'}</p><p class="text-nowrap">Twitter: <a href="https://twitter.com/${owner.twitter_username}" target="_blank" class="link-dark text-decoration-none"> https://twitter.com/${owner.twitter_username}</a></p>`);
+        }
+    </script>
+    
+    
+</body>
+</html>
